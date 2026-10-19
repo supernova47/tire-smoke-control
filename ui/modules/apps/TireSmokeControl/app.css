@@ -1,0 +1,45 @@
+.tscSmokeApp { box-sizing:border-box; width:100%; height:100%; padding:11px; color:#f2f5f8; background:rgba(18,23,30,.94); border:1px solid rgba(178,196,215,.32); border-radius:8px; font-family:"Roboto","Arial",sans-serif; overflow:auto; }
+.tscSmokeApp * { box-sizing:border-box; }
+.tscHeader { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:9px; }
+.tscHeaderText { flex:1 1 auto; min-width:0; }
+.tscEyebrow { font-size:9px; letter-spacing:1.5px; color:#91a4b9; font-weight:700; }
+.tscTitle { font-size:17px; font-weight:700; margin-top:2px; }
+.tscSubtitle { color:#8194a7; font-size:9px; margin-top:3px; }
+.tscSection { border:1px solid rgba(178,196,215,.14); border-radius:6px; padding:8px; margin-top:7px; }
+.tscLifeSection { margin-top:8px; }
+.tscCurrent { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 8px; border-radius:6px; background:rgba(255,255,255,.065); }
+.tscCurrentLabel { color:#c1ccd8; font-size:11px; font-weight:700; }
+.tscCurrentHint { color:#8194a7; font-size:9px; margin-top:3px; }
+.tscCurrentValue { font-size:23px; font-weight:800; letter-spacing:-.5px; color:#79d4ff; white-space:nowrap; }
+.tscLifeValue { color:#b5a0ff; }
+.tscRiseValue { color:#9ce1c6; }
+.tscAdjust { display:flex; align-items:center; gap:8px; margin-top:7px; }
+.tscRangeBox { flex:1; min-width:0; }
+.tscRangeLabel { display:flex; justify-content:space-between; margin-bottom:2px; color:#aebdcb; font-size:10px; }
+.tscRangeLabel strong { color:#f2f5f8; }
+.tscRange { display:block; width:100%; margin:3px 0 0; accent-color:#55c0fa; cursor:pointer; }
+.tscLifeSection .tscRange { accent-color:#b5a0ff; }
+.tscRiseSection .tscRange { accent-color:#79d9b1; }
+.tscButton,.tscPreset { border:1px solid rgba(185,205,225,.25); color:#f5f8fb; background:rgba(255,255,255,.08); border-radius:5px; cursor:pointer; font-weight:700; }
+.tscButton:hover,.tscPreset:hover { background:rgba(85,192,250,.22); border-color:rgba(85,192,250,.7); }
+.tscStep { width:27px; height:28px; font-size:18px; padding:0; flex:0 0 auto; }
+.tscManual { display:flex; align-items:center; gap:5px; margin-top:7px; }
+.tscManual label { flex:1; color:#b7c4d2; font-size:9px; }
+.tscManual input { width:57px; min-width:0; padding:5px 4px; border:1px solid rgba(185,205,225,.28); border-radius:4px; background:rgba(0,0,0,.25); color:#fff; font-size:11px; }
+.tscApply { padding:6px 8px; font-size:9px; background:rgba(36,139,195,.44); }
+.tscPresetsLabel { margin-top:8px; margin-bottom:4px; color:#91a4b9; text-transform:uppercase; letter-spacing:.6px; font-size:8px; font-weight:700; }
+.tscPresets { display:flex; flex-wrap:wrap; gap:4px; }
+.tscPreset { flex:1 0 17%; min-width:37px; padding:5px 2px; font-size:10px; }
+.tscPreset.is-active { background:rgba(52,157,211,.34); border-color:rgba(85,192,250,.8); color:#a7e3ff; }
+.tscLifePresets .tscPreset.is-active { background:rgba(145,121,219,.27); border-color:rgba(181,160,255,.8); color:#d8ceff; }
+.tscRisePresets .tscPreset.is-active { background:rgba(75,175,137,.24); border-color:rgba(121,217,177,.8); color:#c5ffe6; }
+.tscRiseNote { margin-top:6px; color:#8aa79a; font-size:8px; line-height:1.35; }
+.tscFooter { display:flex; align-items:flex-start; gap:6px; margin-top:9px; color:#8394a5; font-size:9px; line-height:1.35; }
+.tscStatusDot { display:inline-block; width:6px; height:6px; flex:0 0 6px; margin-top:2px; border-radius:50%; background:#8b9299; }
+.tscStatusDot.is-active { background:#60d394; box-shadow:0 0 5px rgba(96,211,148,.5); }
+.tscCollapseButton { width:28px; height:28px; padding:0; font-size:19px; line-height:1; }
+.tscCollapsed { width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+.tscRestoreButton { display:flex; align-items:center; justify-content:center; width:42px; height:42px; padding:0; border:1px solid rgba(121,212,255,.72); border-radius:50%; background:rgba(18,23,30,.96); color:#f2f5f8; font-size:22px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+.tscRestoreButton:hover { background:rgba(44,117,153,.96); border-color:#9be1ff; }
+.tscSmokeApp.is-collapsed { width:42px!important; height:42px!important; min-width:42px!important; min-height:42px!important; max-width:42px!important; max-height:42px!important; padding:0!important; overflow:visible!important; background:transparent!important; border:0!important; border-radius:50%!important; box-shadow:none!important; }
+.tscExpanded { width:100%; height:100%; }
