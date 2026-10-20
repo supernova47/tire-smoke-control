@@ -10,6 +10,7 @@ local currentPlayerVehicleId, currentPlayerVehicle = nil, nil
 local lastCommandedVehicleId, lastCommandedSmoke = nil, nil
 local smokeParticleTypes = {}
 local lastParticleScriptKey = nil
+local particleDataBaselines = {}
 
 local function clamp(value, low, high)
   value = tonumber(value)
@@ -137,16 +138,77 @@ function M.onWorldReadyState(state)
   if tonumber(state) == 2 then queueAllVehicleCommands(smokeMultiplier) end
 end
 
--- ParticleEmitterData references ParticleData through `particles`. We cache the
--- original lifetime and gravityCoefficient per actual ParticleData object ID, then
--- always derive requested values from that baseline to avoid cumulative scaling.
+local function findDataBlock(name)
+  if scenetree and type(scenetree.findObject) == "function" then
+    local ok, object = pcall(scenetree.findObject, name)
+    if ok and object then return object end
+  end
+
+  if Sim and type(Sim.getDataBlockSet) == "function" then
+    local ok, dataBlockSet = pcall(Sim.getDataBlockSet)
+    if ok and dataBlockSet and type(dataBlockSet.size) == "function" and type(dataBlockSet.at) == "function" then
+      for index = 0, dataBlockSet:size() - 1 do
+        local found, dataBlock = pcall(dataBlockSet.at, dataBlockSet, index)
+        if found and dataBlock then
+          local nameOk, objectName = pcall(dataBlock.getName, dataBlock)
+          if nameOk and objectName == name then
+            if type(Sim.upcast) == "function" then
+              local upcastOk, object = pcall(Sim.upcast, dataBlock)
+              if upcastOk and object then return object end
+            end
+            return dataBlock
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
+local function readDataBlockNumber(object, fieldName)
+  if not object or type(object.getField) ~= "function" then return nil end
+  local ok, value = pcall(object.getField, object, fieldName, 0)
+  if ok then return tonumber(value) end
+  return nil
+end
+
+local function setDataBlockNumber(object, fieldName, value)
+  if not object or type(object.setField) ~= "function" then return false end
+  local ok = pcall(object.setField, object, fieldName, 0, tostring(value))
+  return ok
+end
+
+local function getParticleDataObjects()
+  local found, seen = {}, {}
+  for _, particleType in ipairs(smokeParticleTypes) do
+    local emitter = findDataBlock("BNGP_" .. tostring(particleType))
+    if emitter and type(emitter.getField) == "function" then
+      local ok, particleNames = pcall(emitter.getField, emitter, "particles", "")
+      if ok and type(particleNames) == "string" then
+        for particleName in particleNames:gmatch("[^%s]+") do
+          if not seen[particleName] then
+            local particle = findDataBlock(particleName)
+            local classOk, className = false, nil
+            if particle and type(particle.getClassName) == "function" then
+              classOk, className = pcall(particle.getClassName, particle)
+            end
+            if particle and classOk and className == "ParticleData" then
+              seen[particleName] = true
+              found[#found + 1] = { name = particleName, object = particle }
+            end
+          end
+        end
+      end
+    end
+  end
+  return found
+end
+
+-- Use BeamNG's Lua datablock API. It stays compatible with the 0.40.1 managed
+-- particle datablocks and avoids relying on TorqueScript variable resolution.
 local function applyParticleSettings()
   if #smokeParticleTypes == 0 then
     log("D", "tireSmokeControl", "Particle settings are waiting for smoke particle types from the active player vehicle")
-    return false
-  end
-  if type(TorqueScript) ~= "table" or type(TorqueScript.eval) ~= "function" then
-    log("W", "tireSmokeControl", "TorqueScript.eval unavailable; particle settings could not be updated")
     return false
   end
 
@@ -155,51 +217,35 @@ local function applyParticleSettings()
   local scriptKey = table.concat(keyParts, ":")
   if scriptKey == lastParticleScriptKey then return true end
 
-  local statements = {
-    "$TSC::settingsApplySuccess = 0;",
-    "$TSC::lifeApplySuccess = 0;",
-    "$TSC::lifeSkippedZero = 0;",
-    "$TSC::riseAdjusted = 0;"
-  }
-  local lifeFactor = string.format("%.1f", lifetimeMultiplier)
-  local riseFactor = string.format("%.2f", riseMultiplier)
-  for _, id in ipairs(smokeParticleTypes) do
-    local emitterName = "BNGP_" .. tostring(id)
-    statements[#statements + 1] = "if (isObject(" .. emitterName .. ")) { " ..
-      "$TSC::Emitter = " .. emitterName .. "; " ..
-      "$TSC::Particle = $TSC::Emitter.particles; " ..
-      "if (isObject($TSC::Particle)) { " ..
-      "$TSC::ParticleKey = $TSC::Particle.getId(); " ..
-      "if ($TSC::baseParticleLifeSet[$TSC::ParticleKey] $= \"\") { " ..
-      "$TSC::baseParticleLife[$TSC::ParticleKey] = $TSC::Particle.lifetimeMS; " ..
-      "$TSC::baseParticleLifeSet[$TSC::ParticleKey] = 1; } " ..
-      "if ($TSC::baseParticleGravitySet[$TSC::ParticleKey] $= \"\") { " ..
-      "$TSC::baseParticleGravity[$TSC::ParticleKey] = $TSC::Particle.gravityCoefficient; " ..
-      "$TSC::baseParticleGravitySet[$TSC::ParticleKey] = 1; } " ..
-      "if ($TSC::baseParticleLife[$TSC::ParticleKey] > 0) { " ..
-      "$TSC::NewLifetime = mFloor($TSC::baseParticleLife[$TSC::ParticleKey] * " .. lifeFactor .. " + 0.5); " ..
-      "if ($TSC::NewLifetime < 1) { $TSC::NewLifetime = 1; } " ..
-      "$TSC::Particle.lifetimeMS = $TSC::NewLifetime; " ..
-      "$TSC::lifeApplySuccess = $TSC::lifeApplySuccess + 1; " ..
-      "} else { $TSC::Particle.lifetimeMS = $TSC::baseParticleLife[$TSC::ParticleKey]; " ..
-      "$TSC::lifeSkippedZero = $TSC::lifeSkippedZero + 1; } " ..
-      "if ($TSC::baseParticleGravity[$TSC::ParticleKey] < 0) { " ..
-      "$TSC::Particle.gravityCoefficient = $TSC::baseParticleGravity[$TSC::ParticleKey] * " .. riseFactor .. "; " ..
-      "$TSC::riseAdjusted = $TSC::riseAdjusted + 1; " ..
-      "} else { $TSC::Particle.gravityCoefficient = $TSC::baseParticleGravity[$TSC::ParticleKey]; } " ..
-      "$TSC::settingsApplySuccess = $TSC::settingsApplySuccess + 1; " ..
-      "} }"
+  local appliedCount = 0
+  for _, entry in ipairs(getParticleDataObjects()) do
+    local particle, name = entry.object, entry.name
+    local baseline = particleDataBaselines[name]
+    if not baseline then
+      baseline = {
+        lifetimeMS = readDataBlockNumber(particle, "lifetimeMS"),
+        gravityCoefficient = readDataBlockNumber(particle, "gravityCoefficient")
+      }
+      particleDataBaselines[name] = baseline
+    end
+
+    local changed = false
+    if baseline.lifetimeMS and baseline.lifetimeMS > 0 then
+      local lifetime = math.max(1, math.floor(baseline.lifetimeMS * lifetimeMultiplier + 0.5))
+      changed = setDataBlockNumber(particle, "lifetimeMS", lifetime) or changed
+    end
+    if baseline.gravityCoefficient then
+      local gravity = baseline.gravityCoefficient < 0 and baseline.gravityCoefficient * riseMultiplier or baseline.gravityCoefficient
+      changed = setDataBlockNumber(particle, "gravityCoefficient", gravity) or changed
+    end
+    if changed then
+      if type(particle.reload) == "function" then pcall(particle.reload, particle) end
+      appliedCount = appliedCount + 1
+    end
   end
-  statements[#statements + 1] = "$TSC::settingsApplySuccess;"
-  local script = table.concat(statements, " ")
-  local ok, result = pcall(TorqueScript.eval, script)
-  if not ok then
-    log("E", "tireSmokeControl", "Failed to apply smoke particle settings: " .. tostring(result))
-    return false
-  end
-  local appliedCount = tonumber(result) or 0
+
   if appliedCount <= 0 then
-    log("W", "tireSmokeControl", "No compatible tire-smoke ParticleData objects found; original particle settings were left unchanged.")
+    log("W", "tireSmokeControl", "No compatible tire-smoke ParticleData datablocks found through BeamNG's Lua datablock API.")
     return false
   end
   lastParticleScriptKey = scriptKey

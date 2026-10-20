@@ -1,15 +1,18 @@
 {
   "name": "Tire Smoke Control",
   "author": "Tire Smoke Control",
-  "version": "0.2.5",
-  "description": "Adjust stock tire smoke amount, particle lifetime and upward movement using an in-game HUD.",
+  "version": "0.2.7",
+  "description": "Tune stock tire smoke amount, lifetime and rise; drag the minimized icon and resize the HUD panel.",
   "directive": "tireSmokeControl",
   "domElement": "<tire-smoke-control></tire-smoke-control>",
+  "interactive": true,
   "css": {
     "width": "365px",
     "height": "625px",
+    "min-width": "280px",
+    "min-height": "300px",
     "top": "170px",
     "left": "200px"
   },
-  "preserveAspectRatio": true
+  "preserveAspectRatio": false
 }
